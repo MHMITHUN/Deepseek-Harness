@@ -408,7 +408,7 @@ describe('workspace browser rows', () => {
     fireEvent.click(screen.getByRole('button', { name: '会话“One”的操作' }))
     expect(onOpen).not.toHaveBeenCalled()
     // Archive is not destructive (log and accounting slot remain): no danger styling.
-    expect(screen.getByRole('menuitem', { name: '归档会话' }).className).not.toMatch(/danger/)
+    expect(screen.getByRole('menuitem', { name: '删除会话' }).className).not.toMatch(/danger/)
     // Rename dispatches with the current display title (dialog prefill).
     fireEvent.click(screen.getByRole('menuitem', { name: '重命名' }))
     expect(screen.queryByRole('menu')).toBeNull()
@@ -419,7 +419,7 @@ describe('workspace browser rows', () => {
     expect(onFork).toHaveBeenCalledWith(node.id)
     // Archive dispatches without opening the session.
     fireEvent.click(screen.getByRole('button', { name: '会话“One”的操作' }))
-    fireEvent.click(screen.getByRole('menuitem', { name: '归档会话' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '删除会话' }))
     expect(onArchive).toHaveBeenCalledWith(node.id)
     expect(onRename).toHaveBeenCalledOnce()
     expect(onOpen).not.toHaveBeenCalled()

@@ -575,7 +575,7 @@ describe('web e2e: workspace management (create / rename / flat view / hover aff
     // Row menu: hover reveals the actions button; Archive session commits
     // without a confirmation dialog (non-destructive: log + accounting stay).
     await clickHoverAction(sessionRow, `Session actions for ${rowTitle}`)
-    await page.getByRole('menuitem', { name: 'Archive session' }).click()
+    await page.getByRole('menuitem', { name: 'Delete session' }).click()
     // The row disappears on the archive-set echo; with no other visible
     // stray, the whole Ungrouped bucket withdraws.
     await expect.poll(() => page.getByText(rowTitle, { exact: true }).count(), { timeout: 10_000 }).toBe(0)
