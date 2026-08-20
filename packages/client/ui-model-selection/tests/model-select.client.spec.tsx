@@ -181,4 +181,57 @@ describe('ModelSelect reasoning effort', () => {
     expect(screen.queryByRole('button')).toBeNull()
     expect(load).not.toHaveBeenCalled()
   })
+
+  it('filters models via search input and shows empty state when no models match', () => {
+    const groups = [
+      {
+        id: 'deepseek-official',
+        name: 'DeepSeek',
+        models: [
+          { id: 'deepseek-v4-flash', name: 'DeepSeek-V4-Flash' },
+          { id: 'deepseek-v4-pro', name: 'DeepSeek-V4-Pro' },
+        ],
+      },
+      {
+        id: 'opencode',
+        name: 'OpenCode',
+        models: [
+          { id: 'claude-haiku-4.5', name: 'Claude Haiku 4.5' },
+          { id: 'claude-opus-4.1', name: 'Claude Opus 4.1' },
+        ],
+      },
+    ]
+    const directory = createSnapshotStore<ModelDirectoryState>(state({ groups }))
+    render(<ModelSelect
+      locked={false}
+      available
+      directory={directory}
+      load={vi.fn()}
+      select={vi.fn().mockResolvedValue(true)}
+      t={t}
+    />)
+
+    fireEvent.click(screen.getByRole('button', { name: /选择模型|当前/ }))
+    fireEvent.click(screen.getByRole('menuitem', { name: /模型/ }))
+
+    const searchInput = screen.getByPlaceholderText('搜索模型…')
+    expect(searchInput).toBeTruthy()
+
+    // Filter by "opus"
+    fireEvent.change(searchInput, { target: { value: 'opus' } })
+    expect(screen.queryByRole('menuitemradio', { name: 'DeepSeek-V4-Flash' })).toBeNull()
+    expect(screen.queryByRole('menuitemradio', { name: 'DeepSeek-V4-Pro' })).toBeNull()
+    expect(screen.queryByRole('menuitemradio', { name: 'Claude Haiku 4.5' })).toBeNull()
+    expect(screen.getByRole('menuitemradio', { name: 'Claude Opus 4.1' })).toBeTruthy()
+
+    // Filter by unmatched string
+    fireEvent.change(searchInput, { target: { value: 'nonexistent-model' } })
+    expect(screen.getByText('没有匹配的模型。')).toBeTruthy()
+
+    // Clear button resets search
+    const clearButton = screen.getByRole('button', { name: '清空搜索' })
+    fireEvent.click(clearButton)
+    expect(screen.getByRole('menuitemradio', { name: 'DeepSeek-V4-Flash' })).toBeTruthy()
+    expect(screen.getByRole('menuitemradio', { name: 'Claude Opus 4.1' })).toBeTruthy()
+  })
 })

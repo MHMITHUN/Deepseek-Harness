@@ -19,7 +19,7 @@ import clsx from 'clsx'
 import type { ModelReasoningEffort, ModelSelection } from '@deepseek-ai/dsh-api-remotes/client'
 import {
   IconCheckOutline16, IconChevronDownOutline14, IconChevronRightOutline14,
-  IconWarningOutline16, Toast,
+  IconCloseOutline16, IconSearchOutline16, IconWarningOutline16, Toast,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ModelSelectInjected } from './slots.ts'
@@ -52,6 +52,7 @@ export function ModelSelect(
   )
   const [open, setOpen] = useState(false)
   const [pane, setPane] = useState<Pane>('root')
+  const [modelSearch, setModelSearch] = useState('')
   // The in-menu error strip serves catalog loads (its Retry re-runs the
   // load); a rejected SELECTION announces through the transient toast
   // instead, so the strip renders only while the latest failure-capable
@@ -76,6 +77,24 @@ export function ModelSelect(
           : { reasoningEffort: model.reasoning.defaultEffort },
       } satisfies ModelSelection,
     }))), [state.groups])
+  const normalizedQuery = modelSearch.trim().toLowerCase()
+  const filteredGroups = useMemo(() => {
+    if (!normalizedQuery) return state.groups
+    return state.groups
+      .map((group) => {
+        const groupMatches = group.name.toLowerCase().includes(normalizedQuery)
+          || group.id.toLowerCase().includes(normalizedQuery)
+        const models = group.models.filter(model =>
+          groupMatches
+          || model.name.toLowerCase().includes(normalizedQuery)
+          || model.id.toLowerCase().includes(normalizedQuery)
+          || (model.description?.toLowerCase().includes(normalizedQuery) ?? false),
+        )
+        return { ...group, models }
+      })
+      .filter(group => group.models.length > 0)
+  }, [state.groups, normalizedQuery])
+
   const selectedIndex = state.current === null
     ? -1
     : choices.findIndex(c => c.selection.provider === state.current?.provider && c.selection.model === state.current.model)
@@ -128,6 +147,7 @@ export function ModelSelect(
 
   const show = (): void => {
     setPane('root')
+    setModelSearch('')
     setOpen(true)
     reload()
   }
@@ -135,6 +155,7 @@ export function ModelSelect(
   const close = (restoreFocus = false): void => {
     setOpen(false)
     setPane('root')
+    setModelSearch('')
     if (restoreFocus) queueMicrotask(() => { triggerRef.current?.focus() })
   }
 
@@ -268,6 +289,33 @@ export function ModelSelect(
 
           {pane === 'model' && (
             <>
+              <div className={css.searchBox}>
+                <IconSearchOutline16 className={css.searchIcon} />
+                <input
+                  type="text"
+                  className={css.searchInput}
+                  value={modelSearch}
+                  placeholder={t('search.placeholder')}
+                  autoFocus
+                  onChange={(e) => { setModelSearch(e.target.value) }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape' && modelSearch.length > 0) {
+                      e.stopPropagation()
+                      setModelSearch('')
+                    }
+                  }}
+                />
+                {modelSearch.length > 0 && (
+                  <button
+                    type="button"
+                    className={css.searchClear}
+                    onClick={() => { setModelSearch('') }}
+                    aria-label={t('search.clear')}
+                  >
+                    <IconCloseOutline16 size={14} />
+                  </button>
+                )}
+              </div>
               {state.status === 'loading' && (
                 <div className={css.status}>{t('status.loading')}</div>
               )}
@@ -284,7 +332,7 @@ export function ModelSelect(
                 </div>
               ))}
               <div className={clsx(css.groups, 'scrollable')}>
-                {state.groups.map((group) => {
+                {filteredGroups.map((group) => {
                   const headingId = `${id}-${group.id}`
                   return (
                     <section role="group" aria-labelledby={headingId} className={css.group} key={group.id}>
@@ -321,6 +369,9 @@ export function ModelSelect(
               </div>
               {state.status === 'ready' && choices.length === 0 && (
                 <div className={css.empty}>{t('empty.models')}</div>
+              )}
+              {state.status === 'ready' && choices.length > 0 && filteredGroups.length === 0 && (
+                <div className={css.empty}>{t('search.noMatches')}</div>
               )}
             </>
           )}
